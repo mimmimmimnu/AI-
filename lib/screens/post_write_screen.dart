@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../providers/post_provider.dart';
 
 class PostWriteScreen extends StatefulWidget {
   const PostWriteScreen({super.key});
@@ -59,6 +61,12 @@ class _PostWriteScreenState extends State<PostWriteScreen> {
                   GestureDetector(
                     onTap: () {
                       if (_controller.text.isNotEmpty) {
+                        context.read<PostProvider>().addPost(
+      text: _controller.text,
+      place: _selectedPlace,
+      hasImage: _hasImage,
+      imageEmoji: '🌸',
+    );
                         Navigator.pop(context, {
                           'text': _controller.text,
                           'place': _selectedPlace,

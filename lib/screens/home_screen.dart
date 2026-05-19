@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/bottom_nav.dart';
+import 'course/course_screen.dart';
+import 'mypage_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -91,17 +93,26 @@ class HomeScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.25),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '코스 보기 →',
-                              style: GoogleFonts.dmSans(
-                                fontSize: 11,
-                                color: Colors.white,
+                          // ── 코스 보기 버튼 연결 ──
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const CourseScreen()),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.25),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '코스 보기 →',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
@@ -122,7 +133,16 @@ class HomeScreen extends StatelessWidget {
                           _FriendAvatar(name: '수아', initial: '수'),
                           _FriendAvatar(name: '현우', initial: '현'),
                           _FriendAvatar(name: '태연', initial: '태'),
-                          _FriendAvatarAdd(),
+                          // ── 친구 추가 버튼 연결 ──
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const MypageScreen()),
+                              );
+                            },
+                            child: _FriendAvatarAdd(),
+                          ),
                         ],
                       ),
                     ),
@@ -234,7 +254,6 @@ class _FriendAvatarAdd extends StatelessWidget {
               border: Border.all(
                 color: const Color(0xFF9B7E85),
                 width: 1.5,
-                style: BorderStyle.solid,
               ),
             ),
             child: const Center(
@@ -314,4 +333,3 @@ class _CourseCard extends StatelessWidget {
     );
   }
 }
-
