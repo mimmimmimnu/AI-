@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Kakao Map Flutter Web">
+
+  <title>kakao_map_app</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- ✅ 카카오 지도 SDK -->
+  <script
+  type="text/javascript"
+  src="//dapi.kakao.com/v2/maps/sdk.js?appkey=94624b0c7c18e3edd28a76e451500573&autoload=false"
+></script>
+
+  <script>
+    let kakaoMap;
+    let kakaoMarkers = [];
+    let commentOverlays = [];
+
+    function initKakaoMap() {
+      // 🔥 kakao 로드 안됐으면 재시도
+      if (typeof kakao === 'undefined') {
+        console.log('kakao 아직 없음 → 재시도');
+        setTimeout(initKakaoMap, 500);
+        return;
+      }
+
+      kakao.maps.load(function () {
+        const container = document.getElementById('kakao-map');
+
+        if (!container) {
+          console.log('div 없음 → 재시도');
+          setTimeout(initKakaoMap, 500);
+          return;
+        }
+
+        const options = {
+          center: new kakao.maps.LatLng(37.5665, 126.9780),
+          level: 5
+        };
+
+        kakaoMap = new kakao.maps.Map(container, options);
+
+        setTimeout(function () {
+          kakaoMap.relayout();
+        }, 500);
+      });
+    }
+
+    function moveMapTo(lat, lng, placeName) {
+      if (!kakaoMap) return;
+
+      const position = new kakao.maps.LatLng(lat, lng);
+      kakaoMap.setCenter(position);
+
+      const marker = new kakao.maps.Marker({
+        position: position,
+        map: kakaoMap
+      });
+
+      kakaoMarkers.push(marker);
+    }
+
+   function clearMarkers() {
+  for (let i = 0; i < kakaoMarkers.length; i++) {
+    kakaoMarkers[i].setMap(null);
+  }
+
+  for (let i = 0; i < commentOverlays.length; i++) {
+    commentOverlays[i].setMap(null);
+  }
+
+  kakaoMarkers = [];
+  commentOverlays = [];
+}
+    function addCommentMarker(lat, lng, labelHtml, comment) {
+  var position = new kakao.maps.LatLng(Number(lat), Number(lng));
+
+  var marker = new kakao.maps.Marker({
+    position: position,
+    map: kakaoMap
+  });
+
+  var overlayContent = document.createElement('div');
+
+  function baseStyle() {
+    overlayContent.style.background = 'white';
+    overlayContent.style.border = '1px solid #888';
+    overlayContent.style.borderRadius = '8px';
+    overlayContent.style.padding = '8px 12px';
+    overlayContent.style.fontSize = '14px';
+    overlayContent.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+  }
+
+  var showingComment = false;
+
+ function showBasic() {
+  baseStyle();
+  overlayContent.style.width = '160px';
+  overlayContent.style.maxWidth = '160px';
+  overlayContent.style.whiteSpace = 'normal';
+  overlayContent.style.wordBreak = 'keep-all';
+  overlayContent.style.overflowWrap = 'break-word';
+  overlayContent.style.textAlign = 'center';
+  overlayContent.innerHTML = labelHtml;
+  showingComment = false;
+}  
+
+  function showReview() {
+    baseStyle();
+    overlayContent.style.width = '260px';
+    overlayContent.style.maxWidth = '260px';
+    overlayContent.style.whiteSpace = 'normal';
+    overlayContent.style.wordBreak = 'break-word';
+    overlayContent.innerHTML = `
+      <b>후기</b><br/>
+      <div style="margin-top:4px; line-height:1.4;">
+        ${comment || '후기가 없습니다.'}
+      </div>
+    `;
+    showingComment = true;
+  }
+
+  var overlay = new kakao.maps.CustomOverlay({
+    position: position,
+    content: overlayContent,
+    yAnchor: 1.8
+  });
+
+  showBasic();
+  overlay.setMap(kakaoMap);
+
+  function toggleContent() {
+    if (showingComment) {
+      showBasic();
+    } else {
+      showReview();
+    }
+  }
+
+  kakao.maps.event.addListener(marker, 'click', toggleContent);
+  overlayContent.onclick = toggleContent;
+}
+
+
+  </script>
+</head>
+
+<body>
+  <!-- Flutter 실행 -->
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
