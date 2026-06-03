@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Course It - AI 데이트 코스 추천">
+  <title>Course It</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    .course-bubble {
+      display: flex; align-items: center; gap: 6px;
+      background: #E8556D; color: white;
+      border-radius: 20px; padding: 5px 10px 5px 5px;
+      font-size: 12px; font-weight: 600;
+      box-shadow: 0 3px 10px rgba(232,85,109,0.45);
+      white-space: nowrap; cursor: pointer;
+      border: 2px solid white; position: relative;
+    }
+    .course-bubble::after {
+      content: ''; position: absolute; bottom: -8px; left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent; border-top-color: #E8556D;
+    }
+    .course-bubble .num {
+      background: white; color: #E8556D; border-radius: 50%;
+      width: 20px; height: 20px; display: flex;
+      align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; flex-shrink: 0;
+    }
+    .course-bubble .name { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+    .search-bubble {
+      background: #9B7E85; color: white; border-radius: 16px;
+      padding: 4px 10px; font-size: 12px; font-weight: 600;
+      box-shadow: 0 2px 8px rgba(155,126,133,0.4);
+      white-space: nowrap; border: 2px solid white; position: relative;
+    }
+    .search-bubble::after {
+      content: ''; position: absolute; bottom: -8px; left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent; border-top-color: #9B7E85;
+    }
+  </style>
+
+  <script>
+    let kakaoMap;
+    let kakaoMarkers   = [];
+    let kakaoOverlays  = [];
+    let kakaoPolylines = [];
+    let commentOverlays = [];
+    let animFrameId    = null;
+
+    // 후기 탭 전용 맵
+    let reviewMap;
+    let reviewMarkers  = [];
+    let reviewOverlays = [];
+
+    var kakaoSdkLoaded = false;
+    var sdkScript = document.createElement('script');
+    sdkScript.type = 'text/javascript';
+    sdkScript.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=94624b0c7c18e3edd28a76e451500573&autoload=false';
+    sdkScript.onload  = function() { kakaoSdkLoaded = true; };
+    sdkScript.onerror = function() { console.error('카카오 SDK 로드 실패'); };
+    document.head.appendChild(sdkScript);
+
+    function initKakaoMap(element, retryCount) {
+      retryCount = retryCount || 0;
+      if (!kakaoSdkLoaded || typeof kakao === 'undefined') {
+        if (retryCount >= 30) return;
+        setTimeout(function() { initKakaoMap(element, retryCount + 1); }, 300);
+        return;
+      }
+      kakao.maps.load(function() {
+        var container = element || document.getElementById('kakao-map');
+        if (!container) { setTimeout(function(){ initKakaoMap(null, retryCount+1); }, 500); return; }
+        if (container.offsetWidth === 0) { container.style.width = '100%'; container.style.height = '100%'; }
+        kakaoMap = new kakao.maps.Map(container, {
+          center: new kakao.maps.LatLng(37.5665, 126.9780), level: 5
+        });
+        setTimeout(function() { kakaoMap.relayout(); }, 500);
+      });
+    }
+
+    function moveMapTo(lat, lng, placeName) {
+      if (!kakaoMap) return;
+      var position = new kakao.maps.LatLng(lat, lng);
+      kakaoMap.panTo(position);
+      var content = '<div class="search-bubble">' + placeName + '</div>';
+      var overlay = new kakao.maps.CustomOverlay({ position: position, content: content, yAnchor: 1.55, xAnchor: 0.5, zIndex: 3 });
+      overlay.setMap(kakaoMap);
+      kakaoOverlays.push(overlay);
+    }
+
+    function addCourseMarker(lat, lng, number, name) {
+      if (!kakaoMap) return;
+      var position = new kakao.maps.LatLng(lat, lng);
+      var content = '<div class="course-bubble"><span class="num">' + number + '</span><span class="name">' + (name || '') + '</span></div>';
+      var zIndex = Math.max(1, 30 - number);
+      var overlay = new kakao.maps.CustomOverlay({ position: position, content: content, yAnchor: 1.55, xAnchor: 0.5, zIndex: zIndex });
+      overlay.setMap(kakaoMap);
+      kakaoOverlays.push(overlay);
+    }
+
+    function initKakaoReviewMap(element, retryCount) {
+      retryCount = retryCount || 0;
+      if (!kakaoSdkLoaded || typeof kakao === 'undefined') {
+        if (retryCount >= 30) return;
+        setTimeout(function() { initKakaoReviewMap(element, retryCount + 1); }, 300);
+        return;
+      }
+      kakao.maps.load(function() {
+        if (!element) return;
+        if (element.offsetWidth === 0) { element.style.width = '100%'; element.style.height = '100%'; }
+        reviewMap = new kakao.maps.Map(element, {
+          center: new kakao.maps.LatLng(37.5665, 126.9780), level: 7
+        });
+        setTimeout(function() { reviewMap.relayout(); }, 500);
+      });
+    }
+
+    function relayoutReviewMap() {
+      if (reviewMap) { reviewMap.relayout(); }
+    }
+
+    function moveReviewMapTo(lat, lng) {
+      if (!reviewMap) return;
+      reviewMap.panTo(new kakao.maps.LatLng(lat, lng));
+    }
+
+    // 후기 탭 전용 마커
+    function addCommentMarker(lat, lng, labelHtml, comment) {
+      if (!reviewMap) return;
+      var position = new kakao.maps.LatLng(Number(lat), Number(lng));
+      var marker = new kakao.maps.Marker({ position: position, map: reviewMap });
+      reviewMarkers.push(marker);
+
+      var overlayContent = document.createElement('div');
+      function baseStyle() {
+        overlayContent.style.background = 'white';
+        overlayContent.style.border = '2px solid #E8556D';
+        overlayContent.style.borderRadius = '8px';
+        overlayContent.style.padding = '8px 12px';
+        overlayContent.style.fontSize = '13px';
+        overlayContent.style.boxShadow = '0 2px 8px rgba(232,85,109,0.25)';
+      }
+      var showingComment = false;
+
+      function showBasic() {
+        baseStyle();
+        overlayContent.style.width = '160px';
+        overlayContent.style.maxWidth = '160px';
+        overlayContent.style.whiteSpace = 'normal';
+        overlayContent.style.wordBreak = 'keep-all';
+        overlayContent.style.textAlign = 'center';
+        overlayContent.innerHTML = labelHtml;
+        showingComment = false;
+      }
+      function showReview() {
+        baseStyle();
+        overlayContent.style.width = '260px';
+        overlayContent.style.maxWidth = '260px';
+        overlayContent.style.whiteSpace = 'normal';
+        overlayContent.style.wordBreak = 'break-word';
+        overlayContent.innerHTML = '<b>💬 후기</b><br/><div style="margin-top:4px;line-height:1.5;">' + (comment || '후기가 없습니다.') + '</div>';
+        showingComment = true;
+      }
+
+      var overlay = new kakao.maps.CustomOverlay({ position: position, content: overlayContent, yAnchor: 1.8 });
+      showBasic();
+      overlay.setMap(reviewMap);
+      reviewOverlays.push(overlay);
+
+      function toggleContent() { if (showingComment) showBasic(); else showReview(); }
+      kakao.maps.event.addListener(marker, 'click', toggleContent);
+      overlayContent.onclick = toggleContent;
+    }
+
+    function drawRoute(segmentsJson) {
+      if (!kakaoMap) return;
+      kakaoPolylines.forEach(function(p) { p.setMap(null); });
+      kakaoPolylines = [];
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+      var segments = JSON.parse(segmentsJson);
+      if (!segments || segments.length === 0) return;
+      var bounds = new kakao.maps.LatLngBounds();
+      segments.forEach(function(seg) {
+        if (!seg || seg.length < 2) return;
+        var path = seg.map(function(c) { var p = new kakao.maps.LatLng(c.lat, c.lng); bounds.extend(p); return p; });
+        new kakao.maps.Polyline({ path: path, strokeWeight: 8, strokeColor: '#ffffff', strokeOpacity: 0.9, strokeStyle: 'solid', zIndex: 1 }).setMap(kakaoMap);
+        var line = new kakao.maps.Polyline({ path: path, strokeWeight: 5, strokeColor: '#E8556D', strokeOpacity: 1.0, strokeStyle: 'solid', zIndex: 2 });
+        line.setMap(kakaoMap);
+        kakaoPolylines.push(line);
+      });
+      kakaoMap.setBounds(bounds, 60);
+    }
+
+    function clearMarkers() {
+      kakaoMarkers.forEach(function(m) { m.setMap(null); }); kakaoMarkers = [];
+      kakaoOverlays.forEach(function(o) { o.setMap(null); }); kakaoOverlays = [];
+      kakaoPolylines.forEach(function(p) { p.setMap(null); }); kakaoPolylines = [];
+      commentOverlays.forEach(function(o) { o.setMap(null); }); commentOverlays = [];
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+    }
+
+    function clearCommentMarkers() {
+      reviewMarkers.forEach(function(m) { m.setMap(null); }); reviewMarkers = [];
+      reviewOverlays.forEach(function(o) { o.setMap(null); }); reviewOverlays = [];
+    }
+  </script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
