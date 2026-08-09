@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "704896568454",
+    "project_id": "course-it-27dde",
+    "storage_bucket": "course-it-27dde.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:704896568454:android:d33f9e823a4c6f25ec1507",
+        "android_client_info": {
+          "package_name": "com.example.datefit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkLqGsM6lCkj4Kj2CnoojirW0OK_q84wI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
